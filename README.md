@@ -15,14 +15,29 @@ Checklist operativo del local para los turnos **Mañana · Pase · Tarde · Madr
 - **Solo hoy:** tareas por excepción para un día y un turno.
 - **Pase de turno:** junta lo que quedó pendiente de la mañana.
 - **Madrugada:** controla que el cierre de la tarde del mismo día esté completo.
-- **Usuarios:** nombre y contraseña (hash SHA-256 con sal). Sirve para registrar quién hizo cada tarea, no es seguridad real.
+- **Usuarios:** nombre y contraseña. Con Firebase, las contraseñas las maneja Firebase Authentication.
 
 ## Cómo corre
 
-`index.html` es una sola página, sin dependencias ni build.
+`index.html` es una sola página, sin build. Elige dónde guardar según dónde se abra:
 
-- **Publicada como artifact de Claude:** usa la base compartida en tiempo real (capacidades `db` y `user`). Lo que tilda uno lo ven todos.
-- **Abierta como archivo suelto o en cualquier hosting estático:** funciona igual, pero guarda los datos solo en ese navegador (`localStorage`).
+1. **Firebase**, cuando se abre desde la web (por ejemplo GitHub Pages). Usuarios con Firebase Authentication y datos en Firestore, en tiempo real para todos los líderes.
+2. **Base de Claude**, cuando se publica como artifact de Claude.
+3. **`localStorage`**, si no hay ninguna de las dos (solo ese navegador).
+
+### Puesta en marcha de Firebase
+
+1. **Authentication → Método de acceso:** activar *Correo electrónico/contraseña*.
+2. **Authentication → Configuración → Dominios autorizados:** agregar `tomaspon.github.io`.
+3. **Firestore Database → Reglas:** pegar el contenido de [`firestore.rules`](firestore.rules) y publicar.
+4. **GitHub → Settings → Pages:** *Deploy from a branch*, rama `main`, carpeta `/ (root)`. Pages en repos privados requiere un plan pago de GitHub; si no, hacer el repo público. La config de Firebase no es secreta.
+
+La app queda en `https://tomaspon.github.io/recepcion-diaria/`. La primera vez que entra alguien, se carga sola la configuración de proveedores y tareas.
+
+### Usuarios
+
+- Cada líder entra con **nombre y contraseña** (mínimo 6 caracteres). Por detrás, el nombre se convierte en un mail interno (`tomas@recepcion-diaria.app`) que nadie necesita conocer.
+- **Para resetear una contraseña:** en Firebase → Authentication → Usuarios, borrar al usuario. Después, en la app, *Editar → Usuarios → Quitar*, y la persona se crea de nuevo.
 
 ## Modelo de datos
 
@@ -30,7 +45,7 @@ Checklist operativo del local para los turnos **Mañana · Pase · Tarde · Madr
 |---|---|
 | `config/main` | `proveedores[]` (`id`, `nombre`, `tareas[]`, `dias{0-6: F/V1/V2/O}`, `turno?`), `controles[]` (`texto`, `hora?`, `na?`), `pase[]`, `cierre[]`, `madrugada[]` |
 | `dias/AAAA-MM-DD` | `hechas{clave: true \| "na"}`, `quien{clave: {n, t}}`, `llegados{}`, `noVino{}`, `extras{id: {tab, texto, hora?}}`, `franco` |
-| `usuarios/{id}` | `nombre`, `salt`, `hash` |
+| `usuarios/{uid}` | `nombre`, `email` (Firebase). En la versión Claude/local: `nombre`, `salt`, `hash` |
 
 Claves de tareas: `proveedor__slug`, `ctl__slug`, `pase__slug`, `cierre__slug`, `mad__slug`, `x__id`.
 

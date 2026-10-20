@@ -3,7 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#E4002B">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+// Configuración pública de Firebase (no es secreta: la seguridad está en las reglas de Firestore).
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDwd9wNpHFA__bC4zeqFq2Ff19nvxbzAdQ",
+  authDomain: "recepcion-diaria.firebaseapp.com",
+  projectId: "recepcion-diaria",
+  storageBucket: "recepcion-diaria.firebasestorage.app",
+  messagingSenderId: "771539123540",
+  appId: "1:771539123540:web:96c4ceecc8be6987d91cc1"
+};
+</script>
 </head>
 <body>
 <title>Recepción Diaria</title>
@@ -282,9 +297,10 @@ async function hashPw(salt,pw){
 }
 function setSession(s){ session=s; try{ if(s) localStorage.setItem("rd_session",JSON.stringify(s)); else localStorage.removeItem("rd_session"); }catch(e){} updUserBtn(); renderLogin(); render(); }
 function updUserBtn(){ const b=document.getElementById("userBtn"); if(b) b.textContent = session ? session.nombre+" · Salir" : "Entrar"; }
+const minPw=()=>store?.kind==="firebase"?6:4;
 function renderLogin(){
   const el=document.getElementById("login"); if(!el) return;
-  if(session && usuarios && !usuarios[session.id]){ session=null; try{localStorage.removeItem("rd_session")}catch(e){} updUserBtn(); }
+  if(store?.kind!=="firebase" && session && usuarios && !usuarios[session.id]){ session=null; try{localStorage.removeItem("rd_session")}catch(e){} updUserBtn(); }
   el.hidden = !!session;
   if(session) return;
   const list=Object.values(usuarios||{}).sort((a,b)=>a.nombre.localeCompare(b.nombre));
@@ -293,8 +309,8 @@ function renderLogin(){
   if(usuarios===null) h+='<p class="status">Cargando usuarios…</p>';
   else if(crear){
     h+='<label for="lnom">Nombre</label><input id="lnom" maxlength="24" required placeholder="Ej.: Martín">'
-      +'<label for="lpw">Contraseña</label><input id="lpw" type="password" minlength="4" required>'
-      +'<label for="lpw2">Repetir contraseña</label><input id="lpw2" type="password" minlength="4" required>'
+      +'<label for="lpw">Contraseña</label><input id="lpw" type="password" minlength="'+minPw()+'" required>'
+      +'<label for="lpw2">Repetir contraseña</label><input id="lpw2" type="password" minlength="'+minPw()+'" required>'
       +'<p class="lerr" id="lerr"></p><button class="btn primary big" type="submit">Crear y entrar</button>'
       +(list.length?'<button class="link" type="button" data-lmode="entrar">Ya tengo usuario</button>':'');
   } else {
@@ -394,6 +410,41 @@ function dbStore(db){
         else { await ref.set(deepMerge({fecha:date},structuredClone(patch))); known.add(date); }
       });
     }
+  };
+}
+
+function fbStore(){
+  firebase.initializeApp(window.FIREBASE_CONFIG);
+  const fs=firebase.firestore(), auth=firebase.auth(); let unsubs=[]; const known=new Set();
+  const onErr=e=>{ const c=e&&e.code||""; setStatus(c.includes("permission")?"No tenés permiso para guardar. Volvé a entrar.":"No se pudo guardar el último cambio. Revisá la conexión."); render(); };
+  return {
+    kind:"firebase",
+    start(){
+      fs.collection("usuarios").onSnapshot(q=>{ const u={}; q.forEach(d=>u[d.id]={id:d.id,...d.data()}); usuarios=u; renderLogin(); }, ()=>{ usuarios={}; renderLogin(); });
+      auth.onAuthStateChanged(user=>{
+        unsubs.forEach(f=>f()); unsubs=[];
+        if(!user){ session=null; config=null; days={}; updUserBtn(); renderLogin(); render(); return; }
+        session={id:user.uid,nombre:user.displayName||"Líder"}; updUserBtn(); renderLogin();
+        unsubs.push(fs.doc("config/main").onSnapshot(s=>{ if(!s.exists){ fs.doc("config/main").set(structuredClone(TEMPLATE)).catch(onErr); return; } config=s.data(); render(); }, onErr));
+        unsubs.push(fs.collection("dias").orderBy("fecha","desc").limit(21).onSnapshot(q=>{ const nd={}; q.forEach(d=>{ nd[d.id]=d.data(); known.add(d.id); }); for(const k in days) if(!(k in nd)) nd[k]=days[k]; days=nd; render(); }, onErr));
+      });
+    },
+    saveConfig(c){ return fs.doc("config/main").set(c).catch(onErr); },
+    patchDay(date,patch){
+      days[date]=deepMerge(structuredClone(days[date]||{fecha:date}),patch); render();
+      return fs.doc("dias/"+date).set(Object.assign({fecha:date},patch),{merge:true}).catch(onErr);
+    },
+    async loadDay(d){ if(days[d]||known.has(d)) return; try{ const g=await fs.doc("dias/"+d).get(); known.add(d); if(g.exists){ days[d]=g.data(); render(); } }catch(e){} },
+    async signUp(nombre,pw){
+      const email=slug(nombre)+"@recepcion-diaria.app";
+      const cred=await auth.createUserWithEmailAndPassword(email,pw);
+      await cred.user.updateProfile({displayName:nombre});
+      await fs.doc("usuarios/"+cred.user.uid).set({nombre,email,creado:Date.now()});
+      session={id:cred.user.uid,nombre}; updUserBtn(); renderLogin(); render();
+    },
+    signIn(u,pw){ return auth.signInWithEmailAndPassword(u.email,pw); },
+    signOut(){ return auth.signOut(); },
+    delUser(id){ return fs.doc("usuarios/"+id).delete().catch(onErr); }
   };
 }
 
@@ -771,9 +822,10 @@ document.getElementById("login").addEventListener("submit",async e=>{
   if(document.getElementById("lnom")){
     const nombre=document.getElementById("lnom").value.trim().replace(/\s+/g," ");
     if(!nombre){ err.textContent="Escribí tu nombre."; return; }
-    if(pw.length<4){ err.textContent="La contraseña tiene que tener al menos 4 caracteres."; return; }
+    if(pw.length<minPw()){ err.textContent="La contraseña tiene que tener al menos "+minPw()+" caracteres."; return; }
     if(pw!==document.getElementById("lpw2").value){ err.textContent="Las contraseñas no coinciden."; return; }
     const id=slug(nombre);
+    if(store?.kind==="firebase"){ try{ await store.signUp(nombre,pw); loginMode="entrar"; }catch(x){ err.textContent=fbErr(x); } return; }
     if(usuarios&&usuarios[id]){ err.textContent="Ya existe un usuario con ese nombre. Probá con tu apellido o una inicial."; return; }
     const salt=Math.random().toString(36).slice(2,12);
     try{ await store.addUser(id,{id,nombre,salt,hash:await hashPw(salt,pw),creado:Date.now()}); }catch(x){ err.textContent="No se pudo crear el usuario. Probá de nuevo."; return; }
@@ -782,11 +834,13 @@ document.getElementById("login").addEventListener("submit",async e=>{
     const sel=document.querySelector('.lname[aria-pressed="true"]');
     if(!sel){ err.textContent="Tocá tu nombre."; return; }
     const u=usuarios[sel.dataset.lid];
+    if(store?.kind==="firebase"){ try{ await store.signIn(u,pw); }catch(x){ err.textContent=fbErr(x); } return; }
     if(!u || await hashPw(u.salt,pw)!==u.hash){ err.textContent="Contraseña incorrecta."; return; }
     setSession({id:u.id,nombre:u.nombre});
   }
 });
-document.getElementById("userBtn").onclick=()=>{ if(session){ loginMode="entrar"; setSession(null); } else renderLogin(); };
+document.getElementById("userBtn").onclick=()=>{ if(session){ loginMode="entrar"; if(store?.signOut) store.signOut(); else setSession(null); } else renderLogin(); };
+function fbErr(x){ const c=x&&x.code||""; return c.includes("email-already-in-use")?"Ya existe un usuario con ese nombre. Probá con tu apellido o una inicial.":c.includes("weak-password")?"La contraseña tiene que tener al menos 6 caracteres.":(c.includes("wrong-password")||c.includes("invalid-credential")||c.includes("invalid-login"))?"Contraseña incorrecta.":c.includes("too-many-requests")?"Demasiados intentos. Esperá unos minutos.":c.includes("network")?"Sin conexión. Revisá internet y probá de nuevo.":"No se pudo completar. Probá de nuevo."; }
 updUserBtn();
 /* ---------- arranque ---------- */
 render();
@@ -794,7 +848,9 @@ render();
   let db=null;
   try{ db = window.claude?.use ? await window.claude.use("db") : null; }catch(e){ db=null; }
   try{ const u = window.claude?.use ? await window.claude.use("user") : null; userApi=u; const c=u ? await u.can("data.write") : null; if(db && c===false) readOnly=true; if(u&&db) meId=await u.id(); }catch(e){}
-  store = db ? dbStore(db) : localStore();
+  if(db) store=dbStore(db);
+  else if(typeof firebase!=="undefined" && window.FIREBASE_CONFIG){ session=null; store=fbStore(); }
+  else store=localStore();
   store.start();
   renderLogin();
 })();
