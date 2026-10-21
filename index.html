@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#E4002B">
+<meta name="theme-color" content="#D23C49">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -28,9 +28,9 @@ window.FIREBASE_CONFIG = {
 <style>
 /* Layout: banda roja fija arriba con el día y las pestañas; debajo, tarjetas blancas redondeadas tipo app de delivery */
 :root{
-  --head:#E4002B; --head-ink:#FFFFFF; --head-soft:rgba(255,255,255,.16); --head-line:rgba(255,255,255,.28);
+  --head:#D23C49; --head-ink:#FFFFFF; --head-soft:rgba(255,255,255,.16); --head-line:rgba(255,255,255,.28);
   --bg:#F6F3F4; --surface:#FFFFFF; --sunk:#F7F2F3; --ink:#1F1A1C; --muted:#756C70; --line:#EDE5E8;
-  --accent:#E4002B; --accent-ink:#FFFFFF; --accent-soft:#FDE6EA;
+  --accent:#C93744; --accent-ink:#FFFFFF; --accent-soft:#FBEAEC;
   --ok:#1E8E4E; --ok-bg:#E2F5EA; --warn:#B85C00; --warn-bg:#FFF0DD; --cold:#2E6FB5; --cold-bg:#E6EFFA;
   --shadow:0 2px 10px rgba(80,10,25,.07);
   --f-display:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -38,15 +38,15 @@ window.FIREBASE_CONFIG = {
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --head:#B5001F; --head-soft:rgba(255,255,255,.12); --head-line:rgba(255,255,255,.22);
+  --head:#8E2F38; --head-soft:rgba(255,255,255,.12); --head-line:rgba(255,255,255,.22);
   --bg:#141113; --surface:#1E1A1C; --sunk:#262123; --ink:#F3EDEF; --muted:#A99EA2; --line:#332C2F;
-  --accent:#FF3B5C; --accent-ink:#FFFFFF; --accent-soft:#3A1820;
+  --accent:#EE6B76; --accent-ink:#2B0F13; --accent-soft:#3A2226;
   --ok:#4CC783; --ok-bg:#142A1E; --warn:#F2A54A; --warn-bg:#2E200F; --cold:#78AEEB; --cold-bg:#16243A;
   --shadow:0 2px 10px rgba(0,0,0,.3); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --head:#B5001F; --head-soft:rgba(255,255,255,.12); --head-line:rgba(255,255,255,.22);
+  --head:#8E2F38; --head-soft:rgba(255,255,255,.12); --head-line:rgba(255,255,255,.22);
   --bg:#141113; --surface:#1E1A1C; --sunk:#262123; --ink:#F3EDEF; --muted:#A99EA2; --line:#332C2F;
-  --accent:#FF3B5C; --accent-ink:#FFFFFF; --accent-soft:#3A1820;
+  --accent:#EE6B76; --accent-ink:#2B0F13; --accent-soft:#3A2226;
   --ok:#4CC783; --ok-bg:#142A1E; --warn:#F2A54A; --warn-bg:#2E200F; --cold:#78AEEB; --cold-bg:#16243A;
   --shadow:0 2px 10px rgba(0,0,0,.3); color-scheme:dark}
 *{box-sizing:border-box}
@@ -60,7 +60,7 @@ button:disabled{cursor:default}
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 header.top button:focus-visible{outline-color:var(--head-ink)}
 
-header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--head);color:var(--head-ink);border-radius:0 0 22px 22px;box-shadow:0 4px 16px rgba(180,0,30,.18)}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--head);color:var(--head-ink);border-radius:0 0 22px 22px;box-shadow:0 4px 16px rgba(140,40,50,.14)}
 header.top .wrap{padding-block:8px 12px;display:grid;gap:10px}
 .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .daynav{display:flex;align-items:center;gap:8px}
