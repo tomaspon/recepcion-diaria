@@ -95,17 +95,24 @@ main .wrap{padding-block:18px 48px;display:grid;grid-template-columns:minmax(0,1
 section h2{font-family:var(--f-display);font-weight:900;font-size:1.15rem;color:var(--ink);margin:0 0 10px}
 .list{display:grid;gap:12px}
 .card{background:var(--surface);border:0;border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
-.card.done{box-shadow:var(--shadow),inset 0 0 0 2px var(--ok)}
+.card.done{box-shadow:var(--shadow)}
 .card.skip{opacity:.55}
 .addx{display:flex;gap:8px;padding:10px 12px;align-items:center}
 .addx input{min-width:0;font:inherit;color:var(--ink);background:var(--sunk);border:1.5px solid var(--line);border-radius:12px;padding:9px 11px}
 .addx input:first-child{flex:1}
 .addx input[type=time]{width:5.8em;flex:none;padding:9px 6px}
 .addx .btn{flex:none;width:42px;height:42px;padding:0;font-size:1.4rem;line-height:1}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;background:var(--surface);box-shadow:var(--shadow);border-radius:999px;padding:6px 6px 6px 14px;font-weight:800}
+.chip button{border:0;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:4px 10px;font-size:.75rem;font-weight:800}
+section h2{display:flex;align-items:center;gap:8px}
+.link.sh{margin-left:auto;font-size:.8rem}
+.nabtn{opacity:.75}
+.trow:hover .nabtn,.nabtn:focus-visible,.nabtn[aria-pressed="true"]{opacity:1}
 .chead.tog{width:100%;background:none;border:0;text-align:left;font:inherit;color:inherit;cursor:pointer}
 .chev{width:20px;height:20px;flex:none;color:var(--muted);transition:transform .2s}
 .chead.tog[aria-expanded="true"] .chev{transform:rotate(180deg)}
-.card.mini{display:block;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.card.mini{display:block;width:100%;padding:0;border:0;text-align:left;font:inherit;color:inherit;cursor:pointer}
 .card.mini .chead{padding:10px 16px}
 .card.mini h3{font-size:1.05rem}
 .chead{display:flex;align-items:center;gap:10px;padding:14px 16px}
@@ -164,7 +171,7 @@ section h2{font-family:var(--f-display);font-weight:900;font-size:1.15rem;color:
 .meta{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;margin-top:3px}
 .meta:empty{display:none}
 .task .meta .when,.task .meta .cold{max-width:none;overflow:visible}
-.who{display:inline;font-size:.76rem;font-weight:700;color:var(--accent);text-decoration:none;margin-top:1px}
+.who{display:inline;font-size:.76rem;font-weight:700;color:var(--muted);text-decoration:none;margin-top:1px}
 .task[aria-checked="true"] .tl .who{text-decoration:none}
 .tc{font-family:var(--f-mono);font-weight:500;font-size:.72rem;opacity:.85}
 .tc.ok{opacity:1}
@@ -329,6 +336,24 @@ function renderLogin(){
   if(active){ const x=document.getElementById(active); if(x) x.focus(); }
 }
 function decorate(){
+  document.querySelectorAll('#app section[data-sec]').forEach(sec=>{
+    const key="sec-"+sec.dataset.sec, card=sec.querySelector(":scope > .card"); if(!card) return;
+    const n=card.querySelectorAll(".task").length;
+    if(sec.dataset.all==="1"){
+      const h2=sec.querySelector("h2");
+      if(!expanded.has(key)){
+        card.hidden=true;
+        const b=document.createElement("button"); b.className="card mini"; b.dataset.act="exp"; b.dataset.p=key;
+        b.innerHTML='<span class="chead"><span class="h3">Todo hecho</span><span class="tag ok">'+n+'/'+n+' ✓</span>'+CHEV+'</span>';
+        sec.appendChild(b);
+      } else if(h2){ const l=document.createElement("button"); l.className="link sh"; l.dataset.act="exp"; l.dataset.p=key; l.textContent="Ocultar"; h2.appendChild(l); }
+    }
+  });
+  document.querySelectorAll('#app .card[data-fold]').forEach(card=>{
+    const key="fold-"+card.dataset.fold, open=expanded.has(key), head=card.querySelector(".chead");
+    card.querySelectorAll(".tasks,.hint").forEach(x=>x.hidden=!open);
+    if(head){ head.classList.add("tog"); head.dataset.act="exp"; head.dataset.p=key; head.setAttribute("role","button"); head.setAttribute("tabindex","0"); head.setAttribute("aria-expanded",open); head.insertAdjacentHTML("beforeend",CHEV); }
+  });
   document.querySelectorAll('#app .task').forEach(el=>{
     const chips=[...el.children].filter(c=>c.classList.contains("when")||c.classList.contains("cold"));
     const tl=el.querySelector(".tl"); if(!chips.length||!tl) return;
@@ -337,6 +362,7 @@ function decorate(){
   if(!readOnly){
     document.querySelectorAll('#app .task[data-k]').forEach(el=>{
       if(el.dataset.arrive) return;
+      if(el.getAttribute("aria-checked")==="true" && ((days[el.dataset.day||view]||{}).hechas||{})[el.dataset.k]!=="na") return;
       const dd=el.dataset.day||view, val=((days[dd]||{}).hechas||{})[el.dataset.k], isNa=val==="na";
       if(isNa){ el.classList.add("isna"); el.setAttribute("aria-checked","true"); }
       const nb=document.createElement("button"); nb.className="nabtn"; nb.dataset.act="na"; nb.dataset.k=el.dataset.k; if(el.dataset.day) nb.dataset.day=el.dataset.day;
@@ -559,7 +585,7 @@ function provHTML(pl,main){
     h+='</div></section>';
   }
   if(pl.noVinieron.length){
-    h+='<section><h2>No vinieron hoy</h2><div class="ghost">'+pl.noVinieron.map(y=>'<span><b>'+esc(y.p.nombre)+'</b>'+(readOnly?'':' · <button class="link" data-act="novino" data-p="'+y.p.id+'" data-v="0">Deshacer</button>')+'</span>').join("")+'</div></section>';
+    h+='<section><h2>No vinieron hoy</h2><div class="chips">'+pl.noVinieron.map(y=>'<span class="chip">'+esc(y.p.nombre)+(readOnly?'':'<button data-act="novino" data-p="'+y.p.id+'" data-v="0" aria-label="Deshacer: '+esc(y.p.nombre)+' sí vino">Deshacer</button>')+'</span>').join("")+'</div></section>';
   }
   return h;
 }
@@ -606,7 +632,7 @@ function renderInner(){
     h+='<p class="hint" style="padding:0">Antes de pasarle la tienda al turno tarde.</p>';
     if(pl.pase.length){
       const all=pl.pase.every(x=>pl.hechas[x.k]);
-      h+='<section><h2>Tienda</h2><div class="card'+(all?' done':'')+'"><div class="tasks" style="border-top:0">'+pl.pase.map(x=>tb(x.k,esc(x.texto))).join("")+'</div></div></section>';
+      h+='<section data-sec="pase" data-all="'+(all?1:0)+'"><h2>Tienda</h2><div class="card'+(all?' done':'')+'"><div class="tasks" style="border-top:0">'+pl.pase.map(x=>tb(x.k,esc(x.texto))).join("")+'</div></div></section>';
     }
     const pend=[];
     for(const f of pl.fijos){ if(f.skip) continue; for(const t of p_t(f.p)){ const k=tkey(f.p,t); if(!pl.hechas[k]) pend.push(tb(k,'<b>'+esc(f.p.nombre)+'</b> · '+esc(t),isCold(t)?'<span class="cold">Cadena de frío</span>':'')); } }
@@ -628,7 +654,7 @@ function renderInner(){
     const now=new Date(); const nowMin = view===today ? now.getHours()*60+now.getMinutes() : (view<today?99999:-1);
     if(!pl.madrugada.length) h+='<div class="empty"><strong>No hay tareas de madrugada cargadas.</strong><span>Agregalas desde "Editar".</span></div>';
     else {
-      h+='<section><h2>Turno madrugada</h2><div class="card'+(pl.madrugada.every(c=>pl.hechas[c.k])?' done':'')+'"><div class="tasks" style="border-top:0">';
+      h+='<section data-sec="mad" data-all="'+(pl.madrugada.every(c=>pl.hechas[c.k])?1:0)+'"><h2>Turno madrugada</h2><div class="card'+(pl.madrugada.every(c=>pl.hechas[c.k])?' done':'')+'"><div class="tasks" style="border-top:0">';
       let nextShown=false;
       for(const c of pl.madrugada){
         const on=!!pl.hechas[c.k]; let chip="";
@@ -645,7 +671,7 @@ function renderInner(){
     if(!pl.cierre.length) h+='<div class="empty">No hay puntos de cierre cargados.</div>';
     else if(!miss.length) h+='<div class="card done"><div class="chead"><h3>Cierre completo</h3><span class="tag ok">'+req.length+'/'+req.length+'</span></div></div>';
     else {
-      h+='<div class="card"><div class="chead"><h3>Faltan '+miss.length+'</h3><span class="count">'+(req.length-miss.length)+'/'+req.length+'</span></div><p class="hint">Si lo resolvés vos, tildalo acá y queda marcado también en la pestaña Tarde.</p><div class="tasks">'
+      h+='<div class="card" data-fold="madcie"><div class="chead"><h3>Faltan '+miss.length+'</h3><span class="count">'+(req.length-miss.length)+'/'+req.length+'</span></div><p class="hint">Si lo resolvés vos, tildalo acá y queda marcado también en la pestaña Tarde.</p><div class="tasks">'
         +miss.map(c=>'<button class="task" role="checkbox" aria-checked="false" data-act="task" data-k="'+c.k+'"'+(readOnly?' disabled':'')+'><span class="box">'+CHECK+'</span><span class="tl">'+esc(c.texto)+'</span></button>').join("")+'</div></div>';
     }
     h+='</section>';
@@ -659,7 +685,7 @@ function renderInner(){
     if(!pl.cierre.length) h+='<div class="empty"><strong>No hay puntos de cierre cargados.</strong><span>Agregalos desde "Editar", uno por línea.</span>'+(readOnly?'':'<div class="row"><button class="btn" data-act="edit">Editar</button></div>')+'</div>';
     else {
       const all=pl.cierre.every(c=>c.na||pl.hechas[c.k]);
-      h+='<section><h2>Antes de terminar el turno · en orden</h2><div class="card'+(all?' done':'')+'"><div class="tasks" style="border-top:0">'
+      h+='<section data-sec="cie" data-all="'+(all?1:0)+'"><h2>Antes de terminar el turno · en orden</h2><div class="card'+(all?' done':'')+'"><div class="tasks" style="border-top:0">'
         +pl.cierre.map((c,i)=>{const on=!!pl.hechas[c.k]; return '<button class="task" role="checkbox" aria-checked="'+on+'" data-act="task" data-k="'+c.k+'"'+(readOnly?' disabled':'')+'><span class="hora" style="width:1.6em">'+(i+1)+'</span><span class="box">'+CHECK+'</span><span class="tl">'+esc(c.texto)+'</span>'+(c.na&&!on?'<span class="when">No aplica hoy</span>':'')+'</button>';}).join("")
         +'</div></div></section>';
       if(all) h+='<p class="status">Cierre completo. Buen turno.</p>';
@@ -677,7 +703,7 @@ function renderInner(){
     const now=new Date(); const nowMin = view===today ? now.getHours()*60+now.getMinutes() : (view<today?99999:-1);
     let nextShown=false;
     const allC=pl.controles.every(c=>c.na||pl.hechas[c.k]);
-    h+='<section><h2>Tareas diarias</h2><div class="card'+(allC?' done':'')+'"><div class="tasks" style="border-top:0">';
+    h+='<section data-sec="ctl" data-all="'+(allC?1:0)+'"><h2>Tareas diarias</h2><div class="card'+(allC?' done':'')+'"><div class="tasks" style="border-top:0">';
     for(const c of pl.controles){
       const on=!!pl.hechas[c.k]; let chip="";
       if(c.hora){
