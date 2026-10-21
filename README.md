@@ -39,13 +39,23 @@ La app queda en `https://tomaspon.github.io/recepcion-diaria/`. La primera vez q
 - Cada líder entra con **nombre y contraseña** (mínimo 6 caracteres). Por detrás, el nombre se convierte en un mail interno (`tomas@recepcion-diaria.app`) que nadie necesita conocer.
 - **Para resetear una contraseña:** en Firebase → Authentication → Usuarios, borrar al usuario. Después, en la app, *Editar → Usuarios → Quitar*, y la persona se crea de nuevo.
 
+## App instalable y sin conexión
+
+- **Instalar:** en Android, Chrome ofrece *Instalar app* (también desde el menú ⋯ de la app). En iPhone: Safari → Compartir → *Agregar a inicio*.
+- **Sin señal:** la app abre igual y deja tildar. Los cambios quedan guardados en el teléfono y se suben solos cuando vuelve la conexión. Arriba aparece *"Sin conexión · se guarda al volver"*.
+- **Archivos:** `manifest.webmanifest`, `sw.js` (guarda la app en el teléfono) e `icons/`.
+
+## Turno de cada líder
+
+Al crear el usuario se elige el turno (Mañana, Tarde o Madrugada), y se puede cambiar desde el menú ⋯ → *Mi turno*. La app abre en la pestaña de ese turno: Tarde abre en *Tarde* y Madrugada en *Madrugada*. Mañana sigue la hora: *Mañana* hasta las 12 y *Pase* de 12 a 14.
+
 ## Modelo de datos
 
 | Colección / doc | Contenido |
 |---|---|
 | `config/main` | `proveedores[]` (`id`, `nombre`, `tareas[]`, `dias{0-6: F/V1/V2/O}`, `turno?`), `controles[]` (`texto`, `hora?`, `na?`), `pase[]`, `cierre[]`, `madrugada[]` |
 | `dias/AAAA-MM-DD` | `hechas{clave: true \| "na"}`, `quien{clave: {n, t}}`, `llegados{}`, `noVino{}`, `extras{id: {tab, texto, hora?}}`, `franco` |
-| `usuarios/{uid}` | `nombre`, `email` (Firebase). En la versión Claude/local: `nombre`, `salt`, `hash` |
+| `usuarios/{uid}` | `nombre`, `email`, `turno` (Firebase). En la versión Claude/local: `nombre`, `salt`, `hash` |
 
 Claves de tareas: `proveedor__slug`, `ctl__slug`, `pase__slug`, `cierre__slug`, `mad__slug`, `x__id`.
 
